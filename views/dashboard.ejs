@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Welcome, <%= user.username %>!</h1>
+      <nav>
+        <a href="/logout" class="btn btn-logout">Logout</a>
+      </nav>
+    </header>
+    
+    <main>
+      <section class="dashboard-section">
+        <h2>Dog Gacha</h2>
+        <p>Click the button to get a random dog image!</p>
+        <div class="action-buttons">
+          <button id="fetchDogBtn" class="btn">Get Random Dog</button>
+          <button id="saveDogBtn" class="btn btn-save" disabled>Save This Dog</button>
+        </div>
+        
+        <div id="dogImageContainer" class="dog-image-container">
+          <p class="placeholder-text">Dog image will appear here</p>
+        </div>
+      </section>
+      
+      <section class="dashboard-section">
+        <h2>Your Dog Collection</h2>
+        
+        <% if (user.savedDogs && user.savedDogs.length > 0) { %>
+          <div class="dog-grid">
+            <% user.savedDogs.forEach(dog => { %>
+              <div class="dog-card">
+                <img src="<%= dog.url %>" alt="Dog image">
+                <p>Saved on: <%= new Date(dog.savedAt).toLocaleDateString() %></p>
+              </div>
+            <% }); %>
+          </div>
+        <% } else { %>
+          <p>No dogs saved yet</p>
+        <% } %>
+      </section>
+    </main>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const fetchDogBtn = document.getElementById('fetchDogBtn');
+      const saveDogBtn = document.getElementById('saveDogBtn');
+      const dogImageContainer = document.getElementById('dogImageContainer');
+      let currentDogUrl = '';
+      
+      //fetch random dog via api
+      fetchDogBtn.addEventListener('click', async function() {
+        try {
+          dogImageContainer.innerHTML = '<p>Loading...</p>';
+          saveDogBtn.disabled = true;
+          
+          const response = await fetch('https://dog.ceo/api/breeds/image/random');
+          const data = await response.json();
+          
+          if (data.status === 'success') {
+            currentDogUrl = data.message;
+            dogImageContainer.innerHTML = `<img src="${currentDogUrl}" alt="Random dog image">`;
+            saveDogBtn.disabled = false;
+          } else {
+            dogImageContainer.innerHTML = '<p>Error fetching dog image. Please try again.</p>';
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          dogImageContainer.innerHTML = '<p>Error fetching dog image. Please try again.</p>';
+        }
+      });
+      
+      //save dog
+      saveDogBtn.addEventListener('click', async function() {
+        if (!currentDogUrl) return;
+        
+        try {
+          const response = await fetch('/dashboard/save-dog', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ url: currentDogUrl })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            alert('Dog saved!');
+            //need to reload page to show new dogs
+            window.location.reload();
+          } else {
+            alert('Error saving dog. Please try again.');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Error saving dog. Please try again.');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
